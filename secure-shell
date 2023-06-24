@@ -1,0 +1,55 @@
+---
+  - name: Secure SSH
+    hosts: servers
+    tasks:
+
+      - name: Add identity key to authorized keys on host
+        become: true
+        authorized_key:
+          user: "{{ ssh_user }}"
+          key: "{{ lookup('file', ssh_pub_key) }}"
+        register: add_identity_key
+
+      - name: Disable empty password login
+        become: true
+        lineinfile:
+          dest: "/etc/ssh/sshd_config"
+          regex: '^#PermitEmptyPasswords'
+          line: 'PermitEmptyPasswords no'
+        notify: restart ssh
+
+      - name: Disable root login
+        become: true
+        lineinfile:
+          dest: "/etc/ssh/sshd_config"
+          regex: '^#PermitRootLogin'
+          line: 'PermitRootLogin no'
+        notify: restart ssh
+
+      - name: Disable password login
+        become: true
+        lineinfile:
+          dest: "/etc/ssh/sshd_config"
+          regexp: '^(#\s*)?PasswordAuthentication'
+          line: 'PasswordAuthentication no'
+        notify: restart ssh
+
+      - name: Disable ChallengeResponseAuthentication
+        become: true
+        lineinfile:
+          dest: "/etc/ssh/sshd_config"
+          regexp: '^(#\s*)?ChallengeResponseAuthentication'
+          line: 'ChallengeResponseAuthentication no'
+        notify: restart ssh
+
+      - name: Disable PasswordAuthentication
+        become: true
+        lineinfile:
+          dest: "/etc/ssh/sshd_config.d/50-cloud-init.conf"
+          regexp: '^(#\s*)?PasswordAuthentication'
+          line: 'PasswordAuthentication no'
+        notify: restart ssh
+
+    handlers:
+      - name: restart ssh
+        service: name=ssh state=restarted
